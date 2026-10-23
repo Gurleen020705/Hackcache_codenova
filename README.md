@@ -61,4 +61,5 @@ flowchart LR
 
 ## Known prototype limits
 
-Tamil coverage is in place for the principal patient flows and hospital place/departments; a few wayfinder game controls, map diagrams and some staff/board labels still have untranslated English fallback text. QR camera support depends on browser capabilities and HTTPS. Voice directions depend on installed browser voices. Online deployment must be completed in your own Git/hosting account; this workspace has not been published.
+Tamil coverage is in place for the principal patient flows and hospital place/departments; a few wayfinder game controls, map diagrams and some staff/board labels still have untranslated English fallback text. QR camera support depends on browser capabilities and HTTPS. Voice directions depend on installed browser voices. Online deployment must be completed in your own Git/hosting account; this workspace has not been published..
+
