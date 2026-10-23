@@ -1,0 +1,185 @@
+{
+  "patients": [
+    {
+      "id": 2,
+      "qrToken": "N4f_hEdJ5CUulKX2e3HLiYtJ",
+      "token": "BON-042",
+      "name": "gi",
+      "age": "20",
+      "gender": "female",
+      "mobile": "",
+      "department": "bones",
+      "status": "done",
+      "created": 1792740504463,
+      "calledAt": 1792744041850,
+      "completedAt": 1792744106152
+    },
+    {
+      "id": 3,
+      "qrToken": "yVr9YF8yytZusm4rsANY3hpa",
+      "token": "BON-043",
+      "name": "DIU",
+      "age": "30",
+      "gender": "female",
+      "mobile": "",
+      "department": "bones",
+      "status": "done",
+      "created": 1792740686154,
+      "calledAt": 1792744107855,
+      "completedAt": 1792746653073
+    },
+    {
+      "id": 4,
+      "token": "MED-044",
+      "name": "hi",
+      "age": 62,
+      "department": "medicine",
+      "status": "done",
+      "created": 1792744084808,
+      "calledAt": 1792744507090,
+      "completedAt": 1792746654647
+    },
+    {
+      "id": 5,
+      "token": "MED-045",
+      "name": "hi",
+      "age": 62,
+      "department": "medicine",
+      "status": "called",
+      "created": 1792744489610,
+      "calledAt": 1792746656270
+    }
+  ],
+  "flags": [
+    {
+      "id": 1792744799524,
+      "time": "1:39:59 AM",
+      "seen": true,
+      "reason": "तुरंत मदद का अनुरोध"
+    },
+    {
+      "id": 1792743386753,
+      "time": "1:16:26 AM",
+      "seen": true,
+      "reason": "तुरंत मदद का अनुरोध"
+    },
+    {
+      "id": 1792741737521,
+      "time": "12:48:57 AM",
+      "seen": true,
+      "reason": "Urgent help request"
+    },
+    {
+      "id": 1792740864889,
+      "time": "12:34:24 AM",
+      "seen": true,
+      "reason": "Urgent help request"
+    },
+    {
+      "id": 1792740863810,
+      "time": "12:34:23 AM",
+      "seen": true,
+      "reason": "Urgent help request"
+    }
+  ],
+  "statuses": {},
+  "history": {
+    "bones": [
+      10,
+      1,
+      10,
+      42
+    ],
+    "medicine": [
+      8,
+      36,
+      8
+    ]
+  },
+  "lastId": 5,
+  "called": {
+    "bones": null,
+    "medicine": 5
+  },
+  "currentToken": {
+    "medicine": "—",
+    "children": "—",
+    "women": "—",
+    "bones": "—",
+    "ent": "—",
+    "eyes": "—",
+    "skin": "—",
+    "ecg": "—"
+  },
+  "queues": {
+    "medicine": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 8,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "children": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 10,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "women": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 12,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "bones": {
+      "waiting": 1,
+      "currentToken": "—",
+      "average": 10,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "ent": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 8,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "eyes": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 8,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "skin": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 8,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    },
+    "ecg": {
+      "waiting": 0,
+      "currentToken": "—",
+      "average": 6,
+      "delay": 0,
+      "ahead": 0,
+      "waitMins": 0
+    }
+  },
+  "updatedAt": 1792740567275,
+  "online": true,
+  "clientPatients": {
+    "3e34e05e-c2a2-42c4-897d-44af9ee2faa9": 3
+  }
+}
