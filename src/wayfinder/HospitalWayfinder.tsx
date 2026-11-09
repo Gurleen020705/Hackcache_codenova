@@ -6,6 +6,7 @@ import ta from '../i18n/ta.js';
 import { findRoute, routeDistance, type HospitalMap, type HospitalRoom } from './pathfinding.mjs';
 const HospitalGame3D = lazy(() => import('./HospitalGame3D'));
 import './wayfinder.css';
+import { recordAndTranscribe, speakWithBrowser, speakWithGnani } from '../voice.js';
 
 const map = hospitalData as HospitalMap;
 const colors: Record<string, string> = { entrance: '#dcf4e8', service: '#e9efff', emergency: '#ffe5e0', lab: '#fff1d6', amenity: '#e1f4f0', vertical: '#f0e8ff', pharmacy: '#fff0dc', opd: '#e8f2ff', ward: '#f2eafa' };
@@ -167,18 +168,14 @@ export default function HospitalWayfinder({ translations = {}, language = 'en', 
     return best.room.node;
   };
   const speakGuideReply = (kind: 'start' | 'arrival' | 'here' | 'unknown', placeName = '') => {
-    if (!('speechSynthesis' in window)) return;
     const replies: Record<string, Record<string, string>> = {
       start: { en: 'I will walk there slowly. Follow the blue route and the moving guide.', hi: 'मैं धीरे-धीरे रास्ता दिखाऊँगा। नीले रास्ते और चलते मार्गदर्शक का अनुसरण करें।', ta: 'நான் மெதுவாக வழிகாட்டுகிறேன். நீலப் பாதையையும் நகரும் வழிகாட்டியையும் பின்தொடருங்கள்.', bn: 'আমি ধীরে ধীরে পথ দেখাব। নীল পথ এবং চলমান গাইডকে অনুসরণ করুন।' },
       arrival: { en: 'You have reached your destination. The guide is waiting here.', hi: 'आप गंतव्य पर पहुँच गए हैं। मार्गदर्शक यहीं रुका है।', ta: 'நீங்கள் இலக்கை அடைந்துவிட்டீர்கள். வழிகாட்டி இங்கே காத்திருக்கிறார்.', bn: 'আপনি গন্তব্যে পৌঁছেছেন। গাইড এখানেই অপেক্ষা করছে।' },
       here: { en: 'I marked your game position at ' + placeName + '.', hi: 'खेल में आपकी जगह ' + placeName + ' पर चिह्नित की गई है।', ta: 'விளையாட்டில் உங்கள் இடம் ' + placeName + ' எனக் குறிக்கப்பட்டது.', bn: placeName + ' স্থানে আপনার গেমের অবস্থান চিহ্নিত করা হয়েছে।' },
       unknown: { en: 'I did not catch that. Please say a place, such as washroom, pharmacy or OPD 3.', hi: 'समझ नहीं आया। जगह का नाम बोलें, जैसे शौचालय, फार्मेसी या ओपीडी 3।', ta: 'புரியவில்லை. கழிப்பறை, மருந்தகம் அல்லது OPD 3 போன்ற இடத்தைச் சொல்லுங்கள்.', bn: 'বুঝতে পারিনি। শৌচাগার, ফার্মেসি বা OPD 3-এর মতো একটি জায়গার নাম বলুন।' },
     };
-    const utterance = new SpeechSynthesisUtterance(replies[kind][voiceLanguage] ?? replies[kind].en);
-    utterance.lang = voiceLanguage === 'bn' ? 'bn-BD' : voiceLanguage === 'ta' ? 'ta-IN' : voiceLanguage === 'hi' ? 'hi-IN' : 'en-IN';
-    const voice = speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(voiceLanguage));
-    if (voiceLanguage !== 'en' && !voice) { setGuideStatus(t.navVoiceUnavailable); return; }
-    if (voice) utterance.voice = voice; speechSynthesis.cancel(); speechSynthesis.speak(utterance);
+    const text = replies[kind][voiceLanguage] ?? replies[kind].en;
+    speakWithGnani(text, voiceLanguage).catch(() => speakWithBrowser(text, voiceLanguage));
   };
   const startSlowGuide = () => {
     if (!route.length) return;
@@ -212,27 +209,16 @@ export default function HospitalWayfinder({ translations = {}, language = 'en', 
     }
     setGuideStatus(t.navVoiceUnknown); speakGuideReply('unknown');
   };
-  const listenToGuide = () => {
-    const Recognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!Recognition) { setGuideStatus(t.navUnsupported); return; }
-    try {
-      recognitionRef.current?.abort?.(); const recognition = new Recognition(); recognitionRef.current = recognition;
-      recognition.lang = voiceLanguage === 'bn' ? 'bn-BD' : voiceLanguage === 'ta' ? 'ta-IN' : voiceLanguage === 'hi' ? 'hi-IN' : 'en-IN';
-      recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 1;
-      let receivedSpeech = false; let hadError = false;
-      recognition.onresult = (event: any) => { receivedSpeech = true; handleVoiceCommand(event.results[0][0].transcript); };
-      recognition.onerror = (event: any) => { hadError = true; setGuideStatus(event.error === 'not-allowed' ? t.navVoicePermission : t.navVoiceUnknown); };
-      recognition.onend = () => { recognitionRef.current = null; if (!receivedSpeech && !hadError) setGuideStatus(t.navVoiceUnknown); };
-      setGuideStatus(t.navListening); recognition.start();
-    } catch { setGuideStatus(t.navUnsupported); }
+  const listenToGuide = async () => {
+    setGuideStatus(t.navListening);
+    try { handleVoiceCommand(await recordAndTranscribe(voiceLanguage)); }
+    catch (error) { setGuideStatus(error instanceof Error && error.message.toLowerCase().includes('permission') ? t.navVoicePermission : error instanceof Error ? error.message : t.navVoiceUnknown); }
   };
   const setDestAndReset = (id: string) => {
     setDestination(id); setProgress(0); setPlaying(false); setAutoGuide(false); setGuideStatus('');
     if (autoWalkOnSelect && id !== start) window.setTimeout(() => { setGameMode('3d'); setAutoGuide(true); setGuideRequest((value) => value + 1); setGuideStatus(t.navWalkStarted); }, 80);
   };
   const voice = () => {
-    if (!('speechSynthesis' in window)) return;
-    speechSynthesis.cancel();
     const speechText = voiceLanguage === 'bn'
       ? routeRooms.slice(1).map((room, index) => room.floor !== routeRooms[index].floor ? `লিফটে করে ${['ভূতল','প্রথম তলা','দ্বিতীয় তলা'][room.floor]}-এ যান।` : `সোজা এগিয়ে যান। ${landmarksBn[room.node] ?? 'করিডর ধরে'} ${namesBn[room.node] ?? room.name}।`).concat(routeRooms.length ? [`আপনি ${namesBn[routeRooms.at(-1)!.node] ?? routeRooms.at(-1)!.name} গন্তব্যে পৌঁছে গেছেন।`] : []).join(' ')
       : voiceLanguage === 'ta' && !tamil
@@ -240,7 +226,7 @@ export default function HospitalWayfinder({ translations = {}, language = 'en', 
       : voiceLanguage === 'hi' && !hindi
         ? routeRooms.slice(1).map((room, index) => room.floor !== routeRooms[index].floor ? `लिफ्ट से ${['भूतल','पहली मंज़िल','दूसरी मंज़िल'][room.floor]} पर जाएँ।` : `गलियारे में सीधे चलें। ${label(room, 'hi')} ${room.landmark} के पास है।`).concat(routeRooms.length ? [`आप ${label(routeRooms.at(-1), 'hi')} पहुँच गए हैं।`] : []).join(' ')
         : directionSteps.map((step) => step.text).join(' ');
-    const utterance = new SpeechSynthesisUtterance(speechText); utterance.lang = voiceLanguage === 'bn' ? 'bn-BD' : voiceLanguage === 'ta' ? 'ta-IN' : voiceLanguage === 'hi' ? 'hi-IN' : 'en-IN'; const voice = speechSynthesis.getVoices().find((item) => item.lang.toLowerCase().startsWith(voiceLanguage)); if (voiceLanguage !== 'en' && !voice) { setGameMessage(`${voiceLanguage === 'hi' ? 'Hindi' : voiceLanguage === 'ta' ? 'Tamil' : 'Bengali'} speech is not installed in this browser. Add that language in browser or Windows speech settings.`); return; } if (voice) utterance.voice = voice; speechSynthesis.speak(utterance);
+    speakWithGnani(speechText, voiceLanguage).catch(() => speakWithBrowser(speechText, voiceLanguage));
   };
   const play = () => { if (!route.length) return; if (progress >= 1) setProgress(0); setPlaying(true); };
   const stepForward = (direction: string) => {

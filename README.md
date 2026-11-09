@@ -4,7 +4,7 @@ Accessible hospital registration, live queues, emergency help and a game-style i
 
 ## Start on your laptop
 
-Install Node.js LTS, open this folder in VS Code, then run:
+Install Node.js LTS, copy `.env.example` to `.env`, replace `GNANI_API_KEY` with your Gnani API key, then open this folder in VS Code and run:
 
 ```powershell
 npm install
@@ -19,7 +19,7 @@ Staff/counter prototype PIN: `2468`. Change it with `STAFF_PIN` before sharing a
 
 - Welcome, registration, slip, queue, hospital wayfinding, emergency help, settings, staff, registration counter and waiting-room board screens.
 - Emergency links on each screen, emergency symptoms in registration, 112/108 details, and urgent flags pinned and sounded on the staff dashboard until marked seen. Emergency cases have an immediate route to Emergency without requiring a token.
-- A five-step registration flow with saved answers when going Back, department cards, microphone input where supported, assisted mode and emergency symptom signs.
+- A five-step registration flow with saved answers when going Back, department cards, Gnani microphone transcription (short recordings), Gnani spoken prompts and emergency symptom signs. Speech uses browser voices as a fallback when Gnani is unavailable.
 - OPD slip token, department/room/doctor, queue estimate, QR, image download, print, read aloud when a matching voice exists, large text and offline-pending status. QR camera scanning is shown only when browser camera and BarcodeDetector support are available.
 - Queue position, current token, provider status, near-turn banner, vibration, sound, notification permission, and a clearly labelled simulated-SMS preview.
 - JSON floor plans, multi-floor Dijkstra routing, accessible routes, destinations, step directions, speech when a matching voice exists, simulated player movement, drag controls, WASD/arrow buttons, reduced motion, route replay and speed settings. No GPS or live motion tracking is used.
@@ -61,4 +61,4 @@ flowchart LR
 
 ## Known prototype limits
 
-Tamil coverage is in place for the principal patient flows and hospital place/departments; a few wayfinder game controls, map diagrams and some staff/board labels still have untranslated English fallback text. QR camera support depends on browser capabilities and HTTPS. Voice directions depend on installed browser voices. Online deployment must be completed in your own Git/hosting account; this workspace has not been published.
+Tamil coverage is in place for the principal patient flows and hospital place/departments; a few wayfinder game controls, map diagrams and some staff/board labels still have untranslated English fallback text. QR camera support depends on browser capabilities and HTTPS. Voice assistance uses Gnani Prisma v3 and Timbre v3 when `GNANI_API_KEY` is configured in the server environment; the key must stay server-side. Speech playback falls back to installed browser voices when Gnani is unavailable. Microphone input requires HTTPS (or localhost) and permission. Online deployment must be completed in your own Git/hosting account; this workspace has not been published.

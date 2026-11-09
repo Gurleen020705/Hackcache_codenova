@@ -2,12 +2,19 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { departments } from '../src/data/departments.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// Load local secrets without adding a runtime dependency. Real deployments should set env vars directly.
+const envFile = path.resolve(here, '../.env');
+if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+  const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+  if (match && !match[1].startsWith('#') && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, '$2');
+}
 const dataDir = process.env.DATA_DIR || path.join(here, 'data');
 const dbFile = path.join(dataDir, 'hospital-state.json');
 // Keep the API on its own port so it does not collide with other local demos.
@@ -64,8 +71,47 @@ function publish() {
   io.emit('queue:changed', { updatedAt: Date.now() });
   io.to('staff').emit('staff:state', state);
 }
-app.use(express.json({ limit: '64kb' }));
+app.use(express.json({ limit: '8mb' }));
 app.get('/api/health', (_req, res) => res.json({ ok: true, updatedAt: Date.now() }));
+app.post('/api/voice/transcribe', async (req, res) => {
+  const apiKey = process.env.GNANI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'Gnani voice is not configured. Add GNANI_API_KEY to .env.' });
+  const { audio, mimeType = 'audio/webm', language = 'en' } = req.body || {};
+  if (typeof audio !== 'string' || audio.length > 7_000_000) return res.status(400).json({ error: 'Audio is missing or too large (maximum 30 seconds).' });
+  const bytes = Buffer.from(audio, 'base64');
+  if (!bytes.length) return res.status(400).json({ error: 'Audio recording is empty.' });
+  const type = String(mimeType).toLowerCase();
+  const extension = type.includes('ogg') ? 'ogg' : type.includes('wav') ? 'wav' : type.includes('mp4') ? 'm4a' : type.includes('mpeg') ? 'mp3' : 'webm';
+  try {
+    const form = new FormData();
+    form.append('audio_file', new Blob([bytes], { type }), `recording.${extension}`);
+    form.append('model', 'prisma-v3.0');
+    const languageCode = ({ en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', bn: 'bn-IN' })[language] || 'indic-auto';
+    form.append('language_code', languageCode);
+    const upstream = await fetch('https://api.vachana.ai/stt/v3', { method: 'POST', headers: { 'X-API-Key-ID': apiKey }, body: form, signal: AbortSignal.timeout(45000) });
+    const result = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) return res.status(upstream.status).json({ error: result.message || result.error?.message || 'Gnani could not transcribe this recording.' });
+    return res.json({ transcript: result.transcript || '', language: result.detected_language_code || languageCode });
+  } catch (error) { return res.status(502).json({ error: error.name === 'TimeoutError' ? 'Gnani transcription timed out.' : 'Could not reach Gnani speech-to-text.' }); }
+});
+app.post('/api/voice/synthesize', async (req, res) => {
+  const apiKey = process.env.GNANI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'Gnani voice is not configured. Add GNANI_API_KEY to .env.' });
+  const text = String(req.body?.text || '').trim();
+  if (!text || text.length > 2000) return res.status(400).json({ error: 'Text is required and must be 2,000 characters or fewer.' });
+  const language = ({ en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', bn: 'bn-IN' })[req.body?.language] || 'en-IN';
+  try {
+    const upstream = await fetch('https://api.vachana.ai/api/v1/tts/inference', {
+      method: 'POST', headers: { 'X-API-Key-ID': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice: 'Chetana', model: 'timbre-v3.0', language, audio_config: { encoding: 'linear_pcm', container: 'wav', num_channels: 1, sample_rate: 24000, sample_width: 2 } }),
+      signal: AbortSignal.timeout(45000),
+    });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Gnani could not synthesize this speech.' });
+    res.set('Content-Type', upstream.headers.get('content-type') || 'audio/wav');
+    res.set('Cache-Control', 'no-store');
+    return res.send(Buffer.from(await upstream.arrayBuffer()));
+  } catch (error) { return res.status(502).json({ error: error.name === 'TimeoutError' ? 'Gnani speech synthesis timed out.' : 'Could not reach Gnani text-to-speech.' }); }
+});
 app.get('/api/public/state', (req, res) => res.json(publicSnapshot(cleanId(req.get('x-client-id')))));
 app.get('/api/public/patient', async (req, res) => {
   const token = String(req.query.token || '').trim().toUpperCase();
